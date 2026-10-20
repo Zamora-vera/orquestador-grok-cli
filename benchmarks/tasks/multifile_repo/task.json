@@ -1,0 +1,7 @@
+{
+  "id": "multifile_repo",
+  "difficulty": "medium",
+  "model": "deep-ultra",
+  "max_turns": 6,
+  "timeout": 300
+}

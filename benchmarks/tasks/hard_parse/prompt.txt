@@ -1,3 +1,0 @@
-Implementa `parse_duration` en duration.py para que `python -m pytest -q` pase.
-Convierte una duracion como "1h30m", "2d", "45s" o "1d2h3m4s" a segundos enteros.
-Unidades: d, h, m, s. Texto vacio, unidades desconocidas o numeros sin unidad deben lanzar ValueError. No modifiques los tests.

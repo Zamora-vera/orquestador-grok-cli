@@ -1,0 +1,1 @@
+El test falla porque repo.py llama a store.load con un argumento incorrecto. Corrige repo.py. No cambies store.py ni los tests.

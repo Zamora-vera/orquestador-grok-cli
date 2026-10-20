@@ -1,0 +1,1 @@
+Implementa `chunk` en lists.py: divide la lista en bloques de tamano size, el ultimo puede ser menor; size<=0 lanza ValueError. No modifiques los tests.

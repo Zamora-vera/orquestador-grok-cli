@@ -78,6 +78,19 @@ def _prompt_text(messages: list[dict]) -> str:
     return (text.strip() or 'hello')[:2000]
 
 
+FAILURE_MARKERS = ('Traceback (most recent call last)', 'AssertionError', 'FAILED ',
+                   '= 1 failed', 'tests failed', 'Exit code 1')
+
+
+def _failure_signal(messages: list[dict]) -> bool:
+    """Recent test or build output showing a failure: escalate this turn to Pro."""
+    for message in messages[-3:]:
+        text = _text_of(message.get('content'))
+        if any(marker in text for marker in FAILURE_MARKERS):
+            return True
+    return False
+
+
 def _task_key(messages: list[dict]) -> str:
     system = ' '.join(_text_of(m.get('content')) for m in messages if m.get('role') == 'system')
     return 'proxy:' + hashlib.sha256(system.encode('utf-8')).hexdigest()[:12]
@@ -251,6 +264,15 @@ class Handler(BaseHTTPRequestHandler):
         context = _context_tokens(messages)
         at = dt.datetime.now(dt.timezone.utc)
         model = choose_model(prompt, vision, context, forced, MODELS, at)
+        escalated = False
+        if not forced and not vision and _failure_signal(messages):
+            pro = next((m for m in MODELS if m.id == 'deepseek-v4-pro'
+                        and m.available() and m.pricing_verified), None)
+            if pro is not None:
+                model = pro
+                escalated = True
+        if escalated:
+            _log({'event': 'escalate', 'model': model.id, 'reason': 'failure_signal'})
         max_tokens = min(int(body.get('max_tokens') or CAP), CAP)
         temperature = float(body.get('temperature') or 0)
         tools = body.get('tools')

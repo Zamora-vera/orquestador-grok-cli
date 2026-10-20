@@ -1,0 +1,7 @@
+{
+  "id": "concurrency_sum",
+  "difficulty": "hard",
+  "model": "deep-ultra",
+  "max_turns": 6,
+  "timeout": 300
+}

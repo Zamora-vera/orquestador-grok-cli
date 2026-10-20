@@ -1,0 +1,1 @@
+Implementa `title_case` en title.py: cada palabra empieza en mayuscula, el resto en minuscula; texto vacio devuelve cadena vacia. No modifiques los tests.

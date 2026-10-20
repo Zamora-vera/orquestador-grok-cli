@@ -1,0 +1,1 @@
+Implementa `slugify` en textutil.py. Reglas: minusculas, sin acentos, espacios y guiones bajos a guion, solo letras/numeros/guion, sin guiones repetidos ni en extremos. No modifiques los tests.

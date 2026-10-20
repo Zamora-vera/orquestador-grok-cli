@@ -77,3 +77,9 @@ def test_thinking_policy():
     proxy._apply_thinking(payload, flash, 'low')
     assert payload['thinking'] == {'type': 'enabled'}
     assert payload['reasoning_effort'] == 'low'
+
+def test_failure_signal_detects_pytest_output():
+    messages = [{'role': 'user', 'content': 'arregla esto'},
+                {'role': 'tool', 'content': 'FAILED test_app.py::test_ok - AssertionError'}]
+    assert proxy._failure_signal(messages)
+    assert not proxy._failure_signal([{'role': 'user', 'content': 'todo bien'}])

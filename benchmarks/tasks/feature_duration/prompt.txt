@@ -1,0 +1,1 @@
+Implementa `parse_duration` en duration.py. Convierte "1h30m", "2d", "45s", "1d2h3m4s" a segundos. Unidades d/h/m/s. Texto vacio, unidad desconocida o numero sin unidad: ValueError. No modifiques los tests.

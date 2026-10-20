@@ -1,0 +1,1 @@
+El import falla por una dependencia circular entre a.py y b.py. Corrige los archivos para que el test pase. No modifiques los tests.

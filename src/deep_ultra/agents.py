@@ -1,6 +1,8 @@
 """Specialist prompt profiles for focused coding work."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from .context import build_pack, render_markdown
 
 PROFILES: dict[str, dict] = {
@@ -60,15 +62,31 @@ def agent_prompt(task: str, pack: dict) -> str:
 
 
 def run_agent(profile: str, task: str, root, *, budget_tokens: int = 6000,
-              cache=None, ask_func=None, max_tokens: int | None = None):
-    """Build the pack and call the shared ask() path with the specialist prompt."""
+              cache=None, ask_func=None, max_tokens: int | None = None,
+              index_path: Path | None = None, memory_path: Path | None = None):
+    """Build the pack, retrieve relevant code and memory, then call ask()."""
     from .core import ask
+    from .memory import Memory
+    from .retrieval import CodeIndex
 
     chosen = select_profile(task) if profile == 'auto' else profile
     if chosen not in PROFILES:
         raise ValueError(f'Unknown profile: {profile}')
     pack = build_pack(root, budget_tokens)
+    extra = []
+    if index_path is not None:
+        index = CodeIndex(index_path)
+        index.refresh(Path(root))
+        snippets = index.snippets(Path(root), task, max(400, budget_tokens // 3))
+        if snippets:
+            extra.append('Relevant code:\n' + snippets)
+    if memory_path is not None:
+        remembered = Memory(memory_path).context(task)
+        if remembered:
+            extra.append('Known decisions and lessons:\n' + remembered)
     prompt = agent_prompt(task, pack)
+    if extra:
+        prompt += '\n\n' + '\n\n'.join(extra)
     answer = (ask_func or ask)(prompt, cache, root=None, max_tokens=max_tokens,
                               system=PROFILES[chosen]['system'], task=f'agent:{chosen}',
                               route_text=task)

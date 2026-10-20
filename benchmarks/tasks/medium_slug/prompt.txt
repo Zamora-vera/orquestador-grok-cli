@@ -1,2 +1,0 @@
-Implementa `slugify` en textutil.py para que `python -m pytest -q` pase.
-Reglas: minusculas, sin acentos, espacios y guiones bajos a guion, solo letras/numeros/guion, sin guiones repetidos ni al inicio/fin. No modifiques los tests.

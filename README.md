@@ -8,12 +8,17 @@ This is **not yet a Grok CLI plugin or an autonomous coding agent**. It does not
 edit files, run multistep tool loops, orchestrate agents, or deploy. Grok CLI
 integration needs its actual extension protocol.
 
-## Status: v0.3.0
+## Status: v0.6.0
 
 Changes in this branch:
 
+- OpenAI-compatible local router with SSE, tools, vision, exact cache and FinOps.
+- Incremental project analysis, code retrieval, specialist profiles and local memory.
+- Escalation to Pro on test/build failure evidence; Flash stays the default.
+- Twenty verifiable coding tasks with 100% pass rate in the first run and 91% of
+  input tokens served from the provider cache. See `benchmarks/README.md`.
 - Model IDs and prices verified against official pages on 2026-10-20.
-- Routing now uses the full difficulty scale instead of a binary flag.
+- Routing uses the full difficulty scale instead of a binary flag.
 - `max_tokens` is bounded and forwarded to the provider, so answers cannot run away.
 - One retry policy (two short backoffs) and same-provider fallback only.
 - Cache keys include `max_tokens`, so a short answer is never reused for a long request.
@@ -171,9 +176,17 @@ and cache replay verified. The real `~/.grok/config.toml` was not modified.
   entry points, test command, TODOs and hotspots. The pack is generated locally
   and trimmed to a token budget; file contents are only hashed for change
   detection. `--changed` refreshes an incremental SQLite index.
+- `deep-ultra context "query" .` searches an incremental code index and prints
+  the most relevant snippets within a token budget. Only text files up to 200 KB
+  are indexed.
 - `deep-ultra agents` lists five specialist profiles (architect, coder, debugger,
   security, tester). `deep-ultra agent auto "task" .` picks one by keyword and
-  sends the pack plus the task through the normal budget, cache and routing path.
+  sends the pack, relevant snippets and local memory through the normal budget,
+  cache and routing path.
+- `deep-ultra memory add|search|list|prune` keeps decisions, resolved errors and
+  patterns locally. Entries expire so stale guidance stops being injected.
+- The router escalates a turn to `deepseek-v4-pro` when the last messages contain
+  test or build failure evidence, and keeps Flash otherwise.
 - `deep-ultra bench --tasks benchmarks/tasks --max-usd 0.10` runs verifiable
   coding tasks through Grok CLI and reports pass rate, cost, tokens and cache
   hits. See `benchmarks/README.md` for the 2026-10-20 results and caveats.

@@ -14,6 +14,8 @@ from .core import DEFAULT_MAX_TOKENS, Cache, DeferredWork, ask, run_tests, safe_
 from .finops import Budget, BudgetExceeded, PricingUnavailable
 
 app = typer.Typer(help='Deep Ultra: context-aware programming assistant')
+memory_app = typer.Typer(help='Local programming memory')
+app.add_typer(memory_app, name='memory')
 
 
 def db() -> Cache:
@@ -99,14 +101,55 @@ def agent(profile: str, task: str, repo: Path = typer.Argument(Path('.')),
           max_tokens: int | None = typer.Option(None, '--max-tokens', min=1)):
     """Run a specialist profile (or 'auto') against the project context."""
     from .agents import run_agent
+    cache_dir = Path.home() / '.cache' / 'deep-ultra'
     try:
-        chosen, pack, answer = run_agent(profile, task, repo, budget_tokens=budget_tokens,
-                                         cache=db(), max_tokens=_limit(max_tokens))
+        chosen, pack, answer = run_agent(
+            profile, task, repo, budget_tokens=budget_tokens, cache=db(), max_tokens=_limit(max_tokens),
+            index_path=cache_dir / 'code.sqlite3', memory_path=cache_dir / 'memory.sqlite3')
     except Exception as exc:
         typer.echo(f'Error: {exc}', err=True)
         raise typer.Exit(1)
     typer.echo(f"[{chosen} | {answer.model.id} | {answer.tariff} | "
                f"ctx~{pack['token_estimate']} | ${answer.cost_usd:.6f}]\n{answer.text}")
+
+
+@app.command()
+def context(query: str, repo: Path = typer.Argument(Path('.')),
+            budget_tokens: int = typer.Option(1500, '--budget-tokens', min=200)):
+    """Search the incremental code index and print the best snippets."""
+    from .retrieval import CodeIndex
+    index = CodeIndex(Path.home() / '.cache' / 'deep-ultra' / 'code.sqlite3')
+    stats = index.refresh(repo)
+    text = index.snippets(repo, query, budget_tokens)
+    typer.echo(text or 'No matches')
+    typer.echo(f"# indexed={stats['indexed']} changed={stats['changed']}", err=True)
+
+
+@memory_app.command('add')
+def memory_add(kind: str, key: str, value: str, ttl_days: int = typer.Option(90, '--ttl-days', min=1)):
+    from .memory import Memory
+    Memory(Path.home() / '.cache' / 'deep-ultra' / 'memory.sqlite3').add(kind, key, value, ttl_days)
+    typer.echo('Saved')
+
+
+@memory_app.command('search')
+def memory_search(query: str, limit: int = typer.Option(5, '--limit', min=1)):
+    from .memory import Memory
+    for item in Memory(Path.home() / '.cache' / 'deep-ultra' / 'memory.sqlite3').search(query, limit):
+        typer.echo(f"[{item['kind']}] {item['key']}: {item['value']}")
+
+
+@memory_app.command('list')
+def memory_list():
+    from .memory import Memory
+    for item in Memory(Path.home() / '.cache' / 'deep-ultra' / 'memory.sqlite3').list():
+        typer.echo(f"{item['id']} [{item['kind']}] {item['key']}: {item['value']}")
+
+
+@memory_app.command('prune')
+def memory_prune():
+    from .memory import Memory
+    typer.echo(f"removed={Memory(Path.home() / '.cache' / 'deep-ultra' / 'memory.sqlite3').prune()}")
 
 
 @app.command('agents')

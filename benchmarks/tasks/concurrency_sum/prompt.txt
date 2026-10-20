@@ -1,0 +1,1 @@
+parallel_sum pierde sumas cuando corre en varios hilos. Corrige con un Lock. No modifiques los tests.

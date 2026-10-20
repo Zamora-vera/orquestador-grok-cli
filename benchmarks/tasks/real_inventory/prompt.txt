@@ -1,0 +1,1 @@
+El total del inventario debe ser precio x cantidad. Corrige store.py y app.py segun corresponda. No modifiques los tests.

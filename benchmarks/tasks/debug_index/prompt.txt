@@ -1,0 +1,1 @@
+El test falla por un indice fuera de rango. Corrige utils.py: devuelve el ultimo elemento y None para lista vacia. No modifiques los tests.
