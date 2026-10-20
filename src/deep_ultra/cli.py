@@ -15,7 +15,9 @@ from .finops import Budget, BudgetExceeded, PricingUnavailable
 
 app = typer.Typer(help='Deep Ultra: context-aware programming assistant')
 memory_app = typer.Typer(help='Local programming memory')
+token_app = typer.Typer(help='Router token in the OS credential store')
 app.add_typer(memory_app, name='memory')
+app.add_typer(token_app, name='token')
 
 
 def db() -> Cache:
@@ -96,24 +98,6 @@ def analyze(repo: Path = typer.Argument(Path('.')), as_json: bool = typer.Option
 
 
 @app.command()
-def agent(profile: str, task: str, repo: Path = typer.Argument(Path('.')),
-          budget_tokens: int = typer.Option(6000, '--budget-tokens', min=500),
-          max_tokens: int | None = typer.Option(None, '--max-tokens', min=1)):
-    """Run a specialist profile (or 'auto') against the project context."""
-    from .agents import run_agent
-    cache_dir = Path.home() / '.cache' / 'deep-ultra'
-    try:
-        chosen, pack, answer = run_agent(
-            profile, task, repo, budget_tokens=budget_tokens, cache=db(), max_tokens=_limit(max_tokens),
-            index_path=cache_dir / 'code.sqlite3', memory_path=cache_dir / 'memory.sqlite3')
-    except Exception as exc:
-        typer.echo(f'Error: {exc}', err=True)
-        raise typer.Exit(1)
-    typer.echo(f"[{chosen} | {answer.model.id} | {answer.tariff} | "
-               f"ctx~{pack['token_estimate']} | ${answer.cost_usd:.6f}]\n{answer.text}")
-
-
-@app.command()
 def context(query: str, repo: Path = typer.Argument(Path('.')),
             budget_tokens: int = typer.Option(1500, '--budget-tokens', min=200)):
     """Search the incremental code index and print the best snippets."""
@@ -152,12 +136,48 @@ def memory_prune():
     typer.echo(f"removed={Memory(Path.home() / '.cache' / 'deep-ultra' / 'memory.sqlite3').prune()}")
 
 
-@app.command('agents')
-def list_agents():
-    """List specialist profiles."""
-    from .agents import PROFILES
-    for name, spec in PROFILES.items():
-        typer.echo(f'{name}: {spec["system"][:90]}...')
+@token_app.command('show')
+def token_show():
+    """Print the token for a launcher. Never log its output."""
+    from .token import get
+    value = get()
+    if not value:
+        typer.echo('No router token stored', err=True)
+        raise typer.Exit(1)
+    typer.echo(value)
+
+
+@token_app.command('rotate')
+def token_rotate():
+    from .token import rotate
+    token = rotate()
+    typer.echo(f'rotated ({len(token)} hex chars)')
+
+
+@token_app.command('set')
+def token_set():
+    """Read a token from stdin so it never appears in the process list."""
+    import sys
+    from .token import store
+    value = sys.stdin.readline().strip()
+    if not value:
+        typer.echo('Empty token', err=True)
+        raise typer.Exit(1)
+    store(value)
+    typer.echo(f'stored ({len(value)} chars)')
+
+
+@token_app.command('status')
+def token_status():
+    from .token import get
+    typer.echo('stored' if get() else 'missing')
+
+
+@token_app.command('delete')
+def token_delete():
+    from .token import delete
+    delete()
+    typer.echo('deleted')
 
 
 @app.command()

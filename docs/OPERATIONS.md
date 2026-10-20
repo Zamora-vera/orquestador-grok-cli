@@ -18,11 +18,13 @@ Set the router token and start the service:
 ```powershell
 $du = "$HOME\.grok\deep-ultra"
 New-Item -ItemType Directory -Force $du | Out-Null
-# 40+ random characters
-Set-Content "$du\router-token.txt" -Value ([guid]::NewGuid().ToString('N')) -NoNewline
+.\.venv\Scripts\python.exe -m deep_ultra.cli token rotate
 & "$du\start-router.ps1"
 & "$du\status-router.ps1"
 ```
+
+The token is stored in Windows Credential Manager, not in a file. Rotate it with
+`deep-ultra token rotate`; launchers read it from the store at startup.
 
 The scheduled task **Deep Ultra Router** starts the router at logon; **Deep Ultra
 Watchdog** checks health every five minutes.
@@ -36,7 +38,7 @@ Add the model block (keep `[models] default` untouched) and the MCP server:
 model = "deep-ultra"
 base_url = "http://127.0.0.1:6011/v1"
 name = "Deep Ultra"
-api_key = "<contents of router-token.txt>"
+env_key = "DEEP_ULTRA_ROUTER_TOKEN"
 api_backend = "chat_completions"
 vision = true
 context_window = 1000000
@@ -50,7 +52,9 @@ args = ["-m", "deep_ultra.cli", "mcp", "--repo", "."]
 startup_timeout_sec = 20
 ```
 
-Verify: `grok mcp doctor deep-ultra` and `grok -p "ok" -m deep-ultra`.
+Verify: `grok mcp doctor deep-ultra` and
+`& "$HOME\.grok\deep-ultra\grok-du.ps1" -p "ok" -m deep-ultra` (the wrapper loads
+the token from Credential Manager and exports `DEEP_ULTRA_ROUTER_TOKEN`).
 
 ## Budgets
 
@@ -98,6 +102,7 @@ backups; do not delete them during an upgrade.
 & "$HOME\.grok\deep-ultra\stop-router.ps1"
 Unregister-ScheduledTask -TaskName 'Deep Ultra Router' -Confirm:$false
 Unregister-ScheduledTask -TaskName 'Deep Ultra Watchdog' -Confirm:$false
+.\.venv\Scripts\python.exe -m deep_ultra.cli token delete
 # Remove [model.deep-ultra] and [mcp_servers.deep-ultra] from config.toml,
 # or restore config.toml.backup-*
 Remove-Item "$HOME\.grok\deep-ultra" -Recurse -Force

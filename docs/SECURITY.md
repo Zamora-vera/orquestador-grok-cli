@@ -31,18 +31,27 @@ the Grok CLI integration. Reviewed 2026-10-20.
    injected agent turn could store a bad instruction. Mitigation: entries expire
    (default 90 days), `memory list` is auditable, `memory prune` removes stale
    entries. Review memory before long unattended runs.
-3. **Local token file (low).** `~/.grok/deep-ultra/router-token.txt` is readable
-   by the current user, as is `config.toml`. Any process running as that user can
-   read it. Loopback binding limits remote abuse. Rotate by replacing both the
-   file and the `api_key` in `config.toml`.
-4. **No TLS (low).** Traffic stays on loopback; TLS would add no protection
-   against a local attacker who can already read the token.
-5. **No per-IP rate limit (low).** Local processes can send many requests. The
+3. **Provider keys in `config.toml` (accepted, user-owned).** The router token no
+   longer appears in the config, but the existing `deepseek-flash`,
+   `deepseek-v4-pro` and `deepseek-chat` entries still carry the DeepSeek API key
+   the user configured. Removing it would break those models. The file is local
+   and readable only by the user; rotating that provider key is the owner's
+   decision.
+4. **Router token storage (resolved).** The token is generated with
+   `secrets.token_hex(32)` and stored in the Windows Credential Locker through
+   `keyring`; `config.toml` references it with
+   `env_key = "DEEP_ULTRA_ROUTER_TOKEN"`. The text file was deleted. Launchers
+   (`grok-du.ps1`, router, watchdog) read it from the credential store at
+   startup. Nothing is printed except by the explicit `token show` command,
+   which launchers capture and never log.
+5. **No TLS (low).** Traffic stays on loopback; TLS would add no protection
+   against a local attacker who can already read the credential.
+6. **No per-IP rate limit (low).** Local processes can send many requests. The
    spend caps bound financial impact; CPU impact remains.
-6. **MCP trust boundary (low).** Grok CLI starts the server from `config.toml`.
+7. **MCP trust boundary (low).** Grok CLI starts the server from `config.toml`.
    A tampered config could point to another command. Treat `config.toml` as a
    privileged file.
-7. **Benchmark harness (low).** It copies task files and runs pytest in a temp
+8. **Benchmark harness (low).** It copies task files and runs pytest in a temp
    directory. It never runs the agent as administrator. The agent itself uses
    `--yolo` in benchmarks, which is acceptable only for disposable copies.
 

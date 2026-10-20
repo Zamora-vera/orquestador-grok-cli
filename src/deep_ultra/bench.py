@@ -7,6 +7,7 @@ tests cannot fake a pass.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -68,8 +69,17 @@ def run_task(task_dir: Path, grok: str, max_turns: int, timeout: int,
                '--cwd', str(workspace)]
     turns = 0
     detail = ''
+    env = os.environ.copy()
+    if not env.get('DEEP_ULTRA_ROUTER_TOKEN'):
+        try:
+            from .token import get
+            token = get()
+        except Exception:  # noqa: BLE001 - CI has no credential backend
+            token = None
+        if token:
+            env['DEEP_ULTRA_ROUTER_TOKEN'] = token
     try:
-        proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(command, capture_output=True, text=True, timeout=timeout, env=env)
         detail = (proc.stdout or '')[-1500:]
         try:
             payload = json.loads(proc.stdout)

@@ -8,18 +8,20 @@ This is **not yet a Grok CLI plugin or an autonomous coding agent**. It does not
 edit files, run multistep tool loops, orchestrate agents, or deploy. Grok CLI
 integration needs its actual extension protocol.
 
-## Status: v0.7.0
+## Status: v1.0.0
 
-Changes in this branch:
+Grok CLI is the agent. Deep Ultra is its local engine: model routing, FinOps,
+cache, context retrieval and MCP tools.
 
+- Router token lives in Windows Credential Manager; the model uses `env_key`,
+  so no token is written to `config.toml`. Run Deep Ultra through
+  `~/.grok/deep-ultra/grok-du.ps1`.
 - MCP stdio server with `search_code`, `project_map`, `memory_search` and
-  `memory_add`, verified from Grok CLI (`4 tools discovered`, real tool call).
-- OpenAI-compatible local router with SSE, tools, vision, exact cache and FinOps.
-- Incremental project analysis, code retrieval, specialist profiles and local memory.
-- Escalation to Pro on test/build failure evidence; Flash stays the default.
-- Twenty verifiable coding tasks run three times: 60/60 passed, p50 15.9 s,
-  p95 21.4 s, 91 % provider-cache reads. See `benchmarks/README.md`.
-- Real Click regression task fixed with 37/37 targeted tests and 2179 total.
+  `memory_add`; verified from Grok CLI.
+- Autonomous Flash/Pro routing, vision, streaming, tool calls and exact cache.
+- Escalation to Pro on test/build failure evidence.
+- Twenty verifiable tasks, three passes: 60/60, p50 15.9 s, 91 % cache.
+- Removed the redundant `deep-ultra agent` commands; Grok CLI owns the agent loop.
 - Model IDs and prices verified against official pages on 2026-10-20.
 - Routing uses the full difficulty scale instead of a binary flag.
 - `max_tokens` is bounded and forwarded to the provider, so answers cannot run away.
@@ -175,24 +177,26 @@ and cache replay verified. The real `~/.grok/config.toml` was not modified.
 
 ## Advanced coding
 
+Grok CLI provides the agent loop and native tools. Deep Ultra supplies context
+and routing:
+
 - `deep-ultra analyze .` builds a bounded context pack: structure, dependencies,
-  entry points, test command, TODOs and hotspots. The pack is generated locally
-  and trimmed to a token budget; file contents are only hashed for change
-  detection. `--changed` refreshes an incremental SQLite index.
+  entry points, test command, TODOs and hotspots. `--changed` refreshes an
+  incremental SQLite index.
 - `deep-ultra context "query" .` searches an incremental code index and prints
-  the most relevant snippets within a token budget. Only text files up to 200 KB
-  are indexed.
-- `deep-ultra agents` lists five specialist profiles (architect, coder, debugger,
-  security, tester). `deep-ultra agent auto "task" .` picks one by keyword and
-  sends the pack, relevant snippets and local memory through the normal budget,
-  cache and routing path.
+  the most relevant snippets within a token budget.
 - `deep-ultra memory add|search|list|prune` keeps decisions, resolved errors and
-  patterns locally. Entries expire so stale guidance stops being injected.
+  patterns locally. Entries expire and are scoped per project.
 - The router escalates a turn to `deepseek-v4-pro` when the last messages contain
   test or build failure evidence, and keeps Flash otherwise.
 - `deep-ultra bench --tasks benchmarks/tasks --max-usd 0.10` runs verifiable
-  coding tasks through Grok CLI and reports pass rate, cost, tokens and cache
-  hits. See `benchmarks/README.md` for the 2026-10-20 results and caveats.
+  coding tasks through Grok CLI. See `benchmarks/README.md`.
+
+Run Deep Ultra from the token wrapper:
+
+```powershell
+& "$HOME\.grok\deep-ultra\grok-du.ps1" -p "tu prompt" -m deep-ultra
+```
 
 ## MCP server
 

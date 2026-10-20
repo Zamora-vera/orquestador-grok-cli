@@ -458,6 +458,14 @@ class Server(ThreadingHTTPServer):
 
 def serve(port: int | None = None) -> None:
     port = port or int(os.getenv('DEEP_ULTRA_ROUTER_PORT', '6011'))
+    if not os.getenv('DEEP_ULTRA_ROUTER_TOKEN'):
+        try:
+            from .token import get
+            token = get()
+        except Exception:  # noqa: BLE001 - no credential backend is not fatal at import
+            token = None
+        if token:
+            os.environ['DEEP_ULTRA_ROUTER_TOKEN'] = token
     cache = Cache(_cache_dir() / 'state.sqlite3')
     server = Server(('127.0.0.1', port), Handler)
     server.daemon_threads = True
