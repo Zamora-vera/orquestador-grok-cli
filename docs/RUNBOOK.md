@@ -19,8 +19,8 @@ $du = "$HOME\.grok\deep-ultra"
 ```
 
 Autostart: the scheduled task **Deep Ultra Router** runs `run-router.cmd` at
-logon. A copy also lives in the Startup folder as a fallback. The script reads
-the token from `router-token.txt` in the same folder; no secret is stored in git.
+logon. The script reads the token from `router-token.txt` in the same folder; no
+secret is stored in git.
 
 ## Enable in Grok CLI
 
