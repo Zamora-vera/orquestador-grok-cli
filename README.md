@@ -122,6 +122,49 @@ assumed by the code.
 
 Commands: `deep-ultra models`, `validate`, `refresh`, `budget`, `usage --days N`.
 
+## Grok CLI router
+
+```bash
+deep-ultra serve --port 6011
+```
+
+Endpoints: `GET /v1/models`, `GET /health`, `POST /v1/chat/completions` with JSON or
+SSE. Grok CLI uses it as a custom model:
+
+```toml
+[model.deep-ultra]
+model = "deep-ultra"
+base_url = "http://127.0.0.1:6011/v1"
+name = "Deep Ultra"
+api_key = "local-router"
+api_backend = "chat_completions"
+vision = true
+context_window = 1000000
+max_completion_tokens = 4096
+temperature = 0
+```
+
+Set `DEEP_ULTRA_ROUTER_TOKEN` to require a bearer token; use the same value as
+`api_key`. Aliases: `deep-ultra-flash` and `deep-ultra-pro` force a model;
+`deep-ultra` routes automatically.
+
+Behavior:
+
+- Flash by default; Pro for hard prompts (architecture, refactor, security,
+  concurrency, migration, debug, or long prompts). Images go to Flash.
+- Thinking is disabled on Flash unless the client sends `reasoning_effort`;
+  Pro runs with `high`.
+- Streaming, tool calls and image parts are forwarded. The response `model`
+  is normalised to the requested alias.
+- Exact-answer cache replays a stored completion as SSE; identical requests in
+  flight wait for the first result instead of calling the provider twice.
+- Budgets, loop protection and the ledger apply to every proxied call.
+- Kimi stays disabled until its prices are verified in the catalog.
+
+Integration checks (2026-10-20) with Grok CLI and a temporary config: plain
+answer `ok`, tool call counted 4 test files, vision read `HOLA 42`, streaming
+and cache replay verified. The real `~/.grok/config.toml` was not modified.
+
 ## Security
 
 - Credentials come only from environment variables.

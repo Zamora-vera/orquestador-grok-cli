@@ -13,6 +13,7 @@ import os
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -104,7 +105,8 @@ class Cache:
 
     def __init__(self, location: Path):
         location.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(location)
+        self.lock = threading.RLock()
+        self.conn = sqlite3.connect(location, check_same_thread=False, timeout=30)
         self.conn.execute('CREATE TABLE IF NOT EXISTS entries (key TEXT PRIMARY KEY, value TEXT NOT NULL, expires REAL NOT NULL)')
         self.conn.execute('CREATE TABLE IF NOT EXISTS memory (key TEXT PRIMARY KEY, value TEXT NOT NULL)')
         columns = {row[1] for row in self.conn.execute('PRAGMA table_info(entries)')}
@@ -113,15 +115,16 @@ class Cache:
         if 'usage' not in columns:
             self.conn.execute('ALTER TABLE entries ADD COLUMN usage TEXT NOT NULL DEFAULT \'{}\'')
         self.conn.commit()
-        self.ledger = Ledger(self.conn)
+        self.ledger = Ledger(self.conn, self.lock)
 
     def get(self, key: str) -> str | None:
         entry = self.get_entry(key)
         return entry[0] if entry else None
 
     def get_entry(self, key: str) -> tuple[str, float, dict] | None:
-        row = self.conn.execute('SELECT value, cost_usd, usage FROM entries WHERE key=? AND expires>?',
-                                (key, time.time())).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT value, cost_usd, usage FROM entries WHERE key=? AND expires>?',
+                                    (key, time.time())).fetchone()
         if not row:
             return None
         try:
@@ -132,21 +135,25 @@ class Cache:
 
     def put(self, key: str, value: str, ttl: int = 3600, cost_usd: float = 0,
             usage: dict | None = None) -> None:
-        self.conn.execute('INSERT OR REPLACE INTO entries (key, value, expires, cost_usd, usage) VALUES (?, ?, ?, ?, ?)',
-                          (key, value, time.time() + ttl, cost_usd, json.dumps(usage or {})))
-        self.conn.commit()
+        with self.lock:
+            self.conn.execute('INSERT OR REPLACE INTO entries (key, value, expires, cost_usd, usage) VALUES (?, ?, ?, ?, ?)',
+                              (key, value, time.time() + ttl, cost_usd, json.dumps(usage or {})))
+            self.conn.commit()
 
     def purge_expired(self) -> int:
-        cur = self.conn.execute('DELETE FROM entries WHERE expires<=?', (time.time(),))
-        self.conn.commit()
+        with self.lock:
+            cur = self.conn.execute('DELETE FROM entries WHERE expires<=?', (time.time(),))
+            self.conn.commit()
         return cur.rowcount
 
     def remember(self, key: str, value: str) -> None:
-        self.conn.execute('INSERT OR REPLACE INTO memory VALUES (?,?)', (key, value))
-        self.conn.commit()
+        with self.lock:
+            self.conn.execute('INSERT OR REPLACE INTO memory VALUES (?,?)', (key, value))
+            self.conn.commit()
 
     def recall(self, key: str) -> str | None:
-        row = self.conn.execute('SELECT value FROM memory WHERE key=?', (key,)).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT value FROM memory WHERE key=?', (key,)).fetchone()
         return row[0] if row else None
 
 

@@ -158,6 +158,13 @@ def refresh():
 
 
 @app.command()
+def serve(port: int = typer.Option(6011, '--port', min=1)):
+    """Run the local OpenAI-compatible router for Grok CLI."""
+    from .proxy import serve as run
+    run(port)
+
+
+@app.command()
 def validate():
     """Offline integrity checks for the catalog and budget defaults (no network)."""
     problems = []

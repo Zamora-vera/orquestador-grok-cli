@@ -10,6 +10,7 @@ import datetime as dt
 import hashlib
 import os
 import sqlite3
+import threading
 from dataclasses import dataclass
 
 from .catalog import ModelSpec
@@ -134,8 +135,9 @@ class Budget:
 class Ledger:
     """SQLite ledger shared with the cache database."""
 
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, lock: threading.RLock | None = None):
         self.conn = conn
+        self.lock = lock or threading.RLock()
         self.conn.execute('''CREATE TABLE IF NOT EXISTS usage (
             id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, task TEXT NOT NULL,
             model TEXT NOT NULL, prompt_tokens INTEGER NOT NULL, cached_tokens INTEGER NOT NULL,
@@ -152,26 +154,31 @@ class Ledger:
         return hashlib.sha256(prompt.encode('utf-8')).hexdigest()
 
     def spent_task(self, task: str) -> float:
-        row = self.conn.execute('SELECT COALESCE(SUM(cost_usd), 0) FROM usage WHERE task=?', (task,)).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT COALESCE(SUM(cost_usd), 0) FROM usage WHERE task=?', (task,)).fetchone()
         return float(row[0])
 
     def spent_since(self, since: dt.datetime) -> float:
-        row = self.conn.execute('SELECT COALESCE(SUM(cost_usd), 0) FROM usage WHERE ts>=?',
-                                (since.timestamp(),)).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT COALESCE(SUM(cost_usd), 0) FROM usage WHERE ts>=?',
+                                    (since.timestamp(),)).fetchone()
         return float(row[0])
 
     def attempts(self, task: str, prompt_hash: str) -> int:
-        row = self.conn.execute('SELECT n FROM calls WHERE task=? AND prompt_hash=?',
-                                (task, prompt_hash)).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT n FROM calls WHERE task=? AND prompt_hash=?',
+                                    (task, prompt_hash)).fetchone()
         return int(row[0]) if row else 0
 
     def bump_attempt(self, task: str, prompt_hash: str) -> None:
-        self.conn.execute('''INSERT INTO calls (task, prompt_hash, n) VALUES (?, ?, 1)
-            ON CONFLICT(task, prompt_hash) DO UPDATE SET n = n + 1''', (task, prompt_hash))
-        self.conn.commit()
+        with self.lock:
+            self.conn.execute('''INSERT INTO calls (task, prompt_hash, n) VALUES (?, ?, 1)
+                ON CONFLICT(task, prompt_hash) DO UPDATE SET n = n + 1''', (task, prompt_hash))
+            self.conn.commit()
 
     def task_calls(self, task: str) -> int:
-        row = self.conn.execute('SELECT COALESCE(SUM(n), 0) FROM calls WHERE task=?', (task,)).fetchone()
+        with self.lock:
+            row = self.conn.execute('SELECT COALESCE(SUM(n), 0) FROM calls WHERE task=?', (task,)).fetchone()
         return int(row[0])
 
     def check(self, task: str, prompt: str, estimate_usd: float, budget: Budget, at: dt.datetime) -> None:
@@ -188,14 +195,15 @@ class Ledger:
 
     def record(self, *, task: str, model: str, usage: dict, cost: float,
                saved_real: float, saved_est: float, at: dt.datetime, cache_hit: bool) -> None:
-        self.conn.execute('''INSERT INTO usage (ts, task, model, prompt_tokens, cached_tokens,
-            completion_tokens, cost_usd, saved_real_usd, saved_est_usd, tariff, cache_hit)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)''', (
-            at.timestamp(), task, model,
-            int(usage.get('prompt_tokens') or 0), _cached_tokens(usage),
-            int(usage.get('completion_tokens') or 0), cost, saved_real, saved_est,
-            tariff(at), int(cache_hit)))
-        self.conn.commit()
+        with self.lock:
+            self.conn.execute('''INSERT INTO usage (ts, task, model, prompt_tokens, cached_tokens,
+                completion_tokens, cost_usd, saved_real_usd, saved_est_usd, tariff, cache_hit)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)''', (
+                at.timestamp(), task, model,
+                int(usage.get('prompt_tokens') or 0), _cached_tokens(usage),
+                int(usage.get('completion_tokens') or 0), cost, saved_real, saved_est,
+                tariff(at), int(cache_hit)))
+            self.conn.commit()
 
     def alerts(self, budget: Budget, at: dt.datetime, task: str | None = None) -> list[str]:
         messages = []
@@ -213,12 +221,13 @@ class Ledger:
     def report(self, days: int = 30, at: dt.datetime | None = None) -> dict:
         at = at or dt.datetime.now(dt.timezone.utc)
         since = at.timestamp() - days * 86400
-        row = self.conn.execute('''SELECT COUNT(*), SUM(cache_hit), COALESCE(SUM(prompt_tokens),0),
-            COALESCE(SUM(cached_tokens),0), COALESCE(SUM(completion_tokens),0),
-            COALESCE(SUM(cost_usd),0), COALESCE(SUM(saved_real_usd),0),
-            COALESCE(SUM(saved_est_usd),0) FROM usage WHERE ts>=?''', (since,)).fetchone()
-        by_model = self.conn.execute('''SELECT model, COUNT(*), COALESCE(SUM(cost_usd),0)
-            FROM usage WHERE ts>=? GROUP BY model ORDER BY 3 DESC''', (since,)).fetchall()
+        with self.lock:
+            row = self.conn.execute('''SELECT COUNT(*), SUM(cache_hit), COALESCE(SUM(prompt_tokens),0),
+                COALESCE(SUM(cached_tokens),0), COALESCE(SUM(completion_tokens),0),
+                COALESCE(SUM(cost_usd),0), COALESCE(SUM(saved_real_usd),0),
+                COALESCE(SUM(saved_est_usd),0) FROM usage WHERE ts>=?''', (since,)).fetchone()
+            by_model = self.conn.execute('''SELECT model, COUNT(*), COALESCE(SUM(cost_usd),0)
+                FROM usage WHERE ts>=? GROUP BY model ORDER BY 3 DESC''', (since,)).fetchall()
         return {
             'days': days, 'events': int(row[0] or 0), 'cache_hits': int(row[1] or 0),
             'prompt_tokens': int(row[2] or 0), 'cached_tokens': int(row[3] or 0),
