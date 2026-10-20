@@ -8,30 +8,34 @@ This is **not yet a Grok CLI plugin or an autonomous coding agent**. It does not
 edit files, run multistep tool loops, orchestrate agents, or deploy. Grok CLI
 integration needs its actual extension protocol.
 
-## Status: v0.2.0
+## Status: v0.3.0
 
 Changes in this branch:
 
-- Model IDs verified against the provider catalog on 2026-10-20.
+- Model IDs and prices verified against official pages on 2026-10-20.
 - Routing now uses the full difficulty scale instead of a binary flag.
 - `max_tokens` is bounded and forwarded to the provider, so answers cannot run away.
 - One retry policy (two short backoffs) and same-provider fallback only.
 - Cache keys include `max_tokens`, so a short answer is never reused for a long request.
 - Cache entries can be purged; the CLI reports whether an answer came from cache or the API.
+- FinOps engine: dated price catalog, peak/off-peak tariffs, budgets, ledger, alerts,
+  loop guard, deferral, and separate real/estimated savings.
 
 ## Verified models
 
-Checked with `GET /v1/models` on 2026-10-20:
+Checked against the official documentation on 2026-10-20:
 
-| Model | Provider | Reasoning | Vision | Cost tier | Key |
-|---|---|---|---|---|---|
-| `deepseek-flash` | DeepSeek | no | no | 1 | `DEEPSEEK_API_KEY` |
-| `deepseek-v4-pro` | DeepSeek | yes | no | 2 | `DEEPSEEK_API_KEY` |
-| `kimi-k2.5` | Kimi (Moonshot) | yes | yes | 3 | `KIMI_API_KEY` |
+| Model | Provider | Version | Context | Vision | Tier | Key |
+|---|---|---|---|---|---|---|
+| `deepseek-flash` | DeepSeek | V4.1-Flash-1017 | 1M | yes | 1 | `DEEPSEEK_API_KEY` |
+| `deepseek-v4-pro` | DeepSeek | V4-Pro-0813 | 1M | no | 2 | `DEEPSEEK_API_KEY` |
+| `kimi-k3` | Kimi | kimi-k3 | 1M | yes | 3 | `KIMI_API_KEY` |
+| `kimi-k2.7-code` | Kimi | kimi-k2.7-code | 256K | yes | 2 | `KIMI_API_KEY` |
+| `kimi-k2.6` | Kimi | kimi-k2.6 | 256K | yes | 2 | `KIMI_API_KEY` |
 
-`deepseek-chat` and `deepseek-reasoner` are **not** in this account's catalog;
-the prototype's old IDs were replaced. The Kimi model ID and endpoint still need
-confirmation against the account documentation before the first live call.
+`deepseek-v4-pro` is a different build (V4-Pro-0813), not an alias of Flash.
+`deepseek-chat` and `deepseek-reasoner` are not in this account's catalog.
+`kimi-k2.5` was discontinued on 2026-08-31.
 
 ## Install
 
@@ -57,25 +61,66 @@ Never paste keys into the chat, code, logs or issues.
 security, concurrency, migration, debug) on a 0–3 scale.
 
 - Score 0–1: `deepseek-flash` (cheapest).
-- Score 2–3: `deepseek-v4-pro` (reasoning).
-- Images: only vision models; with only `DEEPSEEK_API_KEY` set, image requests fail
-  with a clear error instead of silently dropping the image.
-- `--model` overrides routing after checking that the key exists and vision is supported.
+- Score 2–3: `deepseek-v4-pro` (different build, no vision).
+- Images: `deepseek-flash` handles them, so the router does not escalate to Kimi.
+- Provider order: DeepSeek first. Kimi is considered only when no DeepSeek model
+  fits, and its unverified prices currently block automatic selection.
+- `--model` overrides routing after checking key, modality, context and pricing.
 
 Routing is a transparent heuristic, not a quality guarantee.
 
-## Cost controls
+## FinOps engine
 
-- **Exact-answer cache:** SQLite on disk, TTL 1 h by default (`--ttl`), survives restarts.
-  A repeated prompt makes zero API calls.
-- **Bounded output:** `--max-tokens` or `DEEP_ULTRA_MAX_TOKENS`, default 4096.
-- **Bounded retries:** two short backoffs for 429/5xx/network errors; other 4xx fail fast.
-- **Same-provider fallback only:** a prompt never reaches another vendor without approval.
-- **No hidden calls:** one user prompt triggers at most one provider conversation.
-- **Names-only context:** `--repo` sends file names, never contents.
+Prices live in `src/deep_ultra/catalog.json`, with the source URL and the date
+checked. Nothing is treated as permanent: `deep-ultra refresh` compares the
+catalog with each provider's live `/v1/models` (no billing) and exits 1 on drift.
 
-The cache stores answers for a fixed TTL; delete
-`~/.cache/deep-ultra/state.sqlite3` (or call `Cache.purge_expired`) to reclaim space.
+| Model | Peak cache-hit / in / out | Off-peak cache-hit / in / out |
+|---|---|---|
+| `deepseek-flash` | $0.006 / $0.300 / $1.200 | $0.003 / $0.150 / $0.600 |
+| `deepseek-v4-pro` | $0.044 / $1.320 / $3.960 | $0.022 / $0.660 / $1.980 |
+
+USD per 1M tokens, from the official DeepSeek pricing page (2026-10-20).
+Off-peak is exactly half of peak.
+
+**Peak** is 01:00–04:00 and 06:00–10:00 UTC, Monday–Friday, excluding Chinese
+public holidays. Everything else is off-peak, including weekends and holidays in
+full. Holiday dates come from the `holidays` package (CN calendar).
+
+**Deferral.** Interactive requests never wait. `--defer --max-wait SECONDS` moves
+deferrable work to the next off-peak instant and refuses when the wait exceeds the
+cap.
+
+**Budgets.** `DEEP_ULTRA_TASK_BUDGET_USD`, `DEEP_ULTRA_DAILY_BUDGET_USD`,
+`DEEP_ULTRA_ALERT_PCT`; `--budget-usd` overrides the task budget. A worst-case
+estimate is checked before every call, so a call that would cross a limit is
+blocked instead of executed.
+
+**Loop guard.** `DEEP_ULTRA_MAX_CALLS_PER_TASK` (default 25) and
+`DEEP_ULTRA_MAX_REPEATS` (identical prompts, default 3).
+
+**Savings.** The ledger stores every call and cache hit with tokens, cost and
+tariff:
+
+- **Real savings**: an exact local cache hit avoided a call; the stored cost of
+  the original call is reported.
+- **Estimated savings**: provider cache discount plus the off-peak discount
+  versus peak.
+
+They are reported separately by `deep-ultra usage`.
+
+**Provider cache and context reuse.** The system prompt and the repository file
+list are a stable prefix, so repeated calls hit DeepSeek's automatic prefix cache.
+Local cache keys include model, messages, temperature and `max_tokens`.
+
+**Kimi.** IDs and capabilities come from the official model list. The pricing
+tables are rendered client-side and could not be read programmatically, so every
+Kimi entry stays `pricing_verified: false` and the router refuses to spend on it.
+To enable Kimi, point `DEEP_ULTRA_CATALOG` at a catalog file with prices from your
+console. RPM/TPM/TPD depend on the account's cumulative recharge tier and are not
+assumed by the code.
+
+Commands: `deep-ultra models`, `validate`, `refresh`, `budget`, `usage --days N`.
 
 ## Security
 

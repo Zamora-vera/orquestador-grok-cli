@@ -1,0 +1,101 @@
+{
+  "checked_at": "2026-10-20",
+  "sources": {
+    "deepseek": "https://api-docs.deepseek.com/quick_start/pricing",
+    "kimi_models": "https://platform.kimi.ai/docs/models.md",
+    "kimi_pricing": "https://platform.kimi.ai/docs/pricing/chat"
+  },
+  "models": [
+    {
+      "id": "deepseek-flash",
+      "provider": "deepseek",
+      "version": "DeepSeek-V4.1-Flash-1017",
+      "context": 1000000,
+      "max_output": 393216,
+      "vision": true,
+      "tools": true,
+      "reasoning": true,
+      "cache": "implicit",
+      "tier": 1,
+      "endpoint": "https://api.deepseek.com",
+      "key_var": "DEEPSEEK_API_KEY",
+      "pricing_verified": true,
+      "pricing_source": "https://api-docs.deepseek.com/quick_start/pricing",
+      "pricing": {
+        "peak": { "cache_hit": 0.006, "input": 0.3, "output": 1.2 },
+        "off_peak": { "cache_hit": 0.003, "input": 0.15, "output": 0.6 }
+      }
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "provider": "deepseek",
+      "version": "DeepSeek-V4-Pro-0813",
+      "context": 1000000,
+      "max_output": 393216,
+      "vision": false,
+      "tools": true,
+      "reasoning": true,
+      "cache": "implicit",
+      "tier": 2,
+      "endpoint": "https://api.deepseek.com",
+      "key_var": "DEEPSEEK_API_KEY",
+      "pricing_verified": true,
+      "pricing_source": "https://api-docs.deepseek.com/quick_start/pricing",
+      "pricing": {
+        "peak": { "cache_hit": 0.044, "input": 1.32, "output": 3.96 },
+        "off_peak": { "cache_hit": 0.022, "input": 0.66, "output": 1.98 }
+      }
+    },
+    {
+      "id": "kimi-k3",
+      "provider": "kimi",
+      "version": "kimi-k3",
+      "context": 1000000,
+      "max_output": 0,
+      "vision": true,
+      "tools": true,
+      "reasoning": true,
+      "cache": "implicit",
+      "tier": 3,
+      "endpoint": "https://api.moonshot.ai/v1",
+      "key_var": "KIMI_API_KEY",
+      "pricing_verified": false,
+      "pricing_source": "https://platform.kimi.ai/docs/pricing/chat",
+      "pricing": null
+    },
+    {
+      "id": "kimi-k2.7-code",
+      "provider": "kimi",
+      "version": "kimi-k2.7-code",
+      "context": 256000,
+      "max_output": 0,
+      "vision": true,
+      "tools": true,
+      "reasoning": true,
+      "cache": "implicit",
+      "tier": 2,
+      "endpoint": "https://api.moonshot.ai/v1",
+      "key_var": "KIMI_API_KEY",
+      "pricing_verified": false,
+      "pricing_source": "https://platform.kimi.ai/docs/pricing/chat",
+      "pricing": null
+    },
+    {
+      "id": "kimi-k2.6",
+      "provider": "kimi",
+      "version": "kimi-k2.6",
+      "context": 256000,
+      "max_output": 0,
+      "vision": true,
+      "tools": true,
+      "reasoning": true,
+      "cache": "implicit",
+      "tier": 2,
+      "endpoint": "https://api.moonshot.ai/v1",
+      "key_var": "KIMI_API_KEY",
+      "pricing_verified": false,
+      "pricing_source": "https://platform.kimi.ai/docs/pricing/chat",
+      "pricing": null
+    }
+  ]
+}
