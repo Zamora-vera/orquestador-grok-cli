@@ -48,7 +48,9 @@ def test_stream_accumulates_tool_calls():
     assert json.dumps(canonical)  # serializable
 
 
-def test_siblings_stay_in_provider():
+def test_siblings_stay_in_provider(monkeypatch):
+    monkeypatch.setenv('DEEPSEEK_API_KEY', 'test')
+    monkeypatch.setenv('KIMI_API_KEY', 'test')
     selected = next(m for m in proxy.MODELS if m.id == 'deepseek-v4-pro')
     names = [m.id for m in proxy._siblings(selected, False, 1000)]
     assert names[0] == 'deepseek-v4-pro'
