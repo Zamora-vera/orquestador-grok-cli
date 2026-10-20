@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import threading
 import time
 import uuid
@@ -423,10 +424,20 @@ class Handler(BaseHTTPRequestHandler):
         self._done()
 
 
+class Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address) -> None:
+        error = sys.exc_info()[1]
+        if isinstance(error, (ConnectionResetError, ConnectionAbortedError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def serve(port: int | None = None) -> None:
     port = port or int(os.getenv('DEEP_ULTRA_ROUTER_PORT', '6011'))
     cache = Cache(_cache_dir() / 'state.sqlite3')
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    server = Server(('127.0.0.1', port), Handler)
     server.daemon_threads = True
     server.cache = cache  # type: ignore[attr-defined]
     server.lock = threading.Lock()  # type: ignore[attr-defined]
