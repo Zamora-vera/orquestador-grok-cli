@@ -195,7 +195,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(b'0\r\n\r\n')
                 return
             self.wfile.write(f'{len(data):X}\r\n'.encode('ascii') + data + b'\r\n')
-        except (BrokenPipeError, ConnectionResetError):
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             return
 
     def _event(self, payload: dict) -> None:
