@@ -8,15 +8,18 @@ This is **not yet a Grok CLI plugin or an autonomous coding agent**. It does not
 edit files, run multistep tool loops, orchestrate agents, or deploy. Grok CLI
 integration needs its actual extension protocol.
 
-## Status: v0.6.0
+## Status: v0.7.0
 
 Changes in this branch:
 
+- MCP stdio server with `search_code`, `project_map`, `memory_search` and
+  `memory_add`, verified from Grok CLI (`4 tools discovered`, real tool call).
 - OpenAI-compatible local router with SSE, tools, vision, exact cache and FinOps.
 - Incremental project analysis, code retrieval, specialist profiles and local memory.
 - Escalation to Pro on test/build failure evidence; Flash stays the default.
-- Twenty verifiable coding tasks with 100% pass rate in the first run and 91% of
-  input tokens served from the provider cache. See `benchmarks/README.md`.
+- Twenty verifiable coding tasks run three times: 60/60 passed, p50 15.9 s,
+  p95 21.4 s, 91 % provider-cache reads. See `benchmarks/README.md`.
+- Real Click regression task fixed with 37/37 targeted tests and 2179 total.
 - Model IDs and prices verified against official pages on 2026-10-20.
 - Routing uses the full difficulty scale instead of a binary flag.
 - `max_tokens` is bounded and forwarded to the provider, so answers cannot run away.
@@ -190,6 +193,17 @@ and cache replay verified. The real `~/.grok/config.toml` was not modified.
 - `deep-ultra bench --tasks benchmarks/tasks --max-usd 0.10` runs verifiable
   coding tasks through Grok CLI and reports pass rate, cost, tokens and cache
   hits. See `benchmarks/README.md` for the 2026-10-20 results and caveats.
+
+## MCP server
+
+```powershell
+grok mcp add deep-ultra "$PWD\.venv\Scripts\python.exe" -s user -- -m deep_ultra.cli mcp --repo .
+grok mcp doctor deep-ultra
+```
+
+Tools: `search_code`, `project_map`, `memory_search` and `memory_add`. The first
+three are read-only; `memory_add` writes to the local SQLite memory. The server
+executes no shell commands and resolves paths under `--repo`.
 
 ## Security
 

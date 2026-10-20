@@ -17,7 +17,7 @@ from .finops import estimate_tokens
 
 CHUNK_LINES = 40
 MAX_INDEX_BYTES = 200_000
-TOKEN_RE = re.compile(r'[A-Za-z0-9_]+')
+TOKEN_RE = re.compile(r'[A-Za-z0-9]+')
 STOP = {'the', 'and', 'for', 'with', 'from', 'this', 'that', 'def', 'class', 'import',
         'return', 'self', 'none', 'true', 'false', 'que', 'los', 'las', 'una', 'por',
         'para', 'con', 'del', 'como', 'más', 'mas'}

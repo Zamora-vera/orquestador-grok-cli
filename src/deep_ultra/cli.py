@@ -248,6 +248,13 @@ def serve(port: int = typer.Option(6011, '--port', min=1)):
 
 
 @app.command()
+def mcp(repo: Path = typer.Option(Path('.'), '--repo')):
+    """Serve retrieval, project analysis and memory over MCP stdio."""
+    from .mcp import serve
+    serve(repo)
+
+
+@app.command()
 def bench(tasks: Path = Path('benchmarks/tasks'), max_usd: float = typer.Option(0.10, '--max-usd', min=0),
           grok: str = typer.Option('grok', '--grok'), out: Path | None = typer.Option(None, '--out'),
           only: str = typer.Option('', '--only', help='Comma-separated task ids')):
