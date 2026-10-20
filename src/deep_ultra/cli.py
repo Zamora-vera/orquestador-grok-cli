@@ -237,7 +237,8 @@ def refresh():
     drift = False
     for provider in sorted({m.provider for m in MODELS}):
         sample = next(m for m in MODELS if m.provider == provider)
-        token = os.getenv(sample.key_var)
+        from .keys import provider_key
+        token = provider_key(sample)
         if not token:
             typer.echo(f'{provider}: {sample.key_var} missing, skipped')
             continue

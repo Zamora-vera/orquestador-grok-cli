@@ -48,7 +48,8 @@ class ModelSpec:
         return self.pricing.get(tariff)
 
     def available(self) -> bool:
-        return bool(os.getenv(self.key_var))
+        from .keys import provider_key
+        return bool(provider_key(self))
 
 
 def _load(path: Path) -> tuple[tuple[ModelSpec, ...], dict[str, Any]]:

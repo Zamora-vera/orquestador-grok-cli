@@ -226,10 +226,14 @@ def _post(model: ModelSpec, messages: list[dict[str, Any]], temperature: float,
           max_tokens: int, timeout: float) -> tuple[str, dict[str, Any]]:
     token = os.getenv(model.key_var)
     if not token:
+        from .keys import provider_key
+        token = provider_key(model)
+    if not token:
         raise ValueError(f'Missing {model.key_var}')
     url = model.endpoint.rstrip('/') + '/chat/completions'
     payload: dict[str, Any] = {'model': model.id, 'messages': messages,
-                              'temperature': temperature, 'max_tokens': max_tokens}
+                              'temperature': 1.0 if model.provider == 'kimi' else temperature,
+                              'max_tokens': max_tokens}
     apply_thinking(payload, model)
     response = httpx.post(url, headers={'Authorization': f'Bearer {token}'},
                           json=payload, timeout=timeout)

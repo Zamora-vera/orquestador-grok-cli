@@ -25,6 +25,7 @@ from . import finops
 from .catalog import MODELS
 from .core import BUDGET_MARGIN, Cache, DEFAULT_MAX_TOKENS, apply_thinking as _apply_thinking, choose_model
 from .finops import Budget, PricingUnavailable
+from .keys import provider_key
 
 PUBLIC = ('deep-ultra', 'deep-ultra-flash', 'deep-ultra-pro')
 FORCED = {'deep-ultra-flash': 'deepseek-flash', 'deep-ultra-pro': 'deepseek-v4-pro'}
@@ -331,7 +332,8 @@ class Handler(BaseHTTPRequestHandler):
         candidates = _siblings(model, vision, context)
         last: Exception | None = None
         for candidate in candidates:
-            payload = {'model': candidate.id, 'messages': messages, 'temperature': temperature,
+            payload = {'model': candidate.id, 'messages': messages,
+                       'temperature': 1.0 if candidate.provider == 'kimi' else temperature,
                        'max_tokens': max_tokens, 'stream': stream}
             for field in ('stop', 'top_p', 'tools', 'tool_choice', 'parallel_tool_calls', 'response_format'):
                 if body.get(field) is not None:
@@ -346,7 +348,7 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     request = client.build_request(
                         'POST', candidate.endpoint.rstrip('/') + '/chat/completions',
-                        headers={'Authorization': f"Bearer {os.getenv(candidate.key_var)}"},
+                        headers={'Authorization': f'Bearer {provider_key(candidate)}'},
                         json=payload)
                     response = client.send(request, stream=stream)
                 except httpx.HTTPError as exc:
