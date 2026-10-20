@@ -73,7 +73,7 @@ def chat(prompt: str, model: str = typer.Option('', '--model'), image: Path | No
         detail = (f"in={usage.get('prompt_tokens', '?')} out={usage.get('completion_tokens', '?')} "
                   f"| ${answer.cost_usd:.6f} | est. saved ${answer.saved_est_usd:.6f}")
     typer.echo(f"[{answer.model.id} | {answer.tariff} | {detail}]\n{answer.text}")
-    for alert in cache.ledger.alerts(config, dt.datetime.now(dt.timezone.utc)):
+    for alert in cache.ledger.alerts(config, dt.datetime.now(dt.timezone.utc), task):
         typer.echo(f'Alert: {alert}', err=True)
 
 

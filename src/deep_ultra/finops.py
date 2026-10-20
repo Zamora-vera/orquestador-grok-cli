@@ -197,12 +197,17 @@ class Ledger:
             tariff(at), int(cache_hit)))
         self.conn.commit()
 
-    def alerts(self, budget: Budget, at: dt.datetime) -> list[str]:
+    def alerts(self, budget: Budget, at: dt.datetime, task: str | None = None) -> list[str]:
         messages = []
+        if task and budget.task_usd:
+            spent_task = self.spent_task(task)
+            if spent_task / budget.task_usd >= budget.alert_pct:
+                messages.append(f'task {task!r} spend ${spent_task:.4f} of ${budget.task_usd:.4f}')
         day_start = at.astimezone(dt.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-        for label, spent, limit in (('daily', self.spent_since(day_start), budget.daily_usd),):
-            if limit and spent / limit >= budget.alert_pct:
-                messages.append(f'{label} spend ${spent:.4f} of ${limit:.4f}')
+        if budget.daily_usd:
+            spent_day = self.spent_since(day_start)
+            if spent_day / budget.daily_usd >= budget.alert_pct:
+                messages.append(f'daily spend ${spent_day:.4f} of ${budget.daily_usd:.4f}')
         return messages
 
     def report(self, days: int = 30, at: dt.datetime | None = None) -> dict:

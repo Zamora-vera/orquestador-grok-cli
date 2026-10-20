@@ -97,3 +97,14 @@ def test_report_separates_real_and_estimated_savings(tmp_path):
     assert report['saved_real_usd'] == pytest.approx(0.01)
     assert report['saved_est_usd'] == pytest.approx(0.002)
     assert report['cost_usd'] == pytest.approx(0.01)
+
+
+def test_task_and_daily_alerts(tmp_path):
+    import sqlite3
+    ledger = Ledger(sqlite3.connect(tmp_path / 'l.db'))
+    at = dt.datetime(2026, 10, 19, 5, 0, tzinfo=UTC)
+    ledger.record(task='job', model='deepseek-flash', usage={'prompt_tokens': 1, 'completion_tokens': 1},
+                  cost=0.009, saved_real=0, saved_est=0, at=at, cache_hit=False)
+    alerts = ledger.alerts(Budget(task_usd=0.01, daily_usd=0.01, alert_pct=0.8), at, 'job')
+    assert any("task 'job'" in message for message in alerts)
+    assert any('daily' in message for message in alerts)
