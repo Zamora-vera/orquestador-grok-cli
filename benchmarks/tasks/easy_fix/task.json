@@ -1,0 +1,7 @@
+{
+  "model": "deep-ultra",
+  "difficulty": "easy",
+  "timeout": 240,
+  "max_turns": 6,
+  "id": "easy_fix"
+}

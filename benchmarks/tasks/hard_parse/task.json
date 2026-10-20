@@ -1,0 +1,7 @@
+{
+  "max_turns": 10,
+  "id": "hard_parse",
+  "model": "deep-ultra",
+  "difficulty": "hard",
+  "timeout": 360
+}

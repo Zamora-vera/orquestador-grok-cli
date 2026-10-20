@@ -1,0 +1,7 @@
+{
+  "model": "deep-ultra",
+  "difficulty": "medium",
+  "id": "medium_slug",
+  "timeout": 300,
+  "max_turns": 8
+}

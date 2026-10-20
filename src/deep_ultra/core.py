@@ -29,6 +29,8 @@ DEFAULT_MAX_TOKENS = 4096
 RETRY_DELAYS = (0.5, 1.0)
 PROVIDER_RANK = {'deepseek': 0, 'kimi': 1}
 BUDGET_MARGIN = 1.2
+DEFAULT_SYSTEM = ('You are Deep Ultra, a precise software engineer. Never claim to have edited '
+                  'files, run tests, or deployed unless actually done. Ask before destructive operations.')
 
 
 class DeferredWork(RuntimeError):
@@ -180,7 +182,8 @@ def cache_key(messages: list[dict[str, Any]], model: ModelSpec, temperature: flo
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def build_messages(prompt: str, root: Path | None, vision_path: Path | None) -> list[dict[str, Any]]:
+def build_messages(prompt: str, root: Path | None, vision_path: Path | None,
+                   system: str | None = None) -> list[dict[str, Any]]:
     content: Any = prompt
     if vision_path:
         content = [{'type': 'text', 'text': prompt}, file_image_data(vision_path)]
@@ -188,7 +191,7 @@ def build_messages(prompt: str, root: Path | None, vision_path: Path | None) -> 
     if root:
         context = '\nRepository files (names only):\n' + '\n'.join(safe_repo_files(root))
     return [
-        {'role': 'system', 'content': 'You are Deep Ultra, a precise software engineer. Never claim to have edited files, run tests, or deployed unless actually done. Ask before destructive operations.' + context},
+        {'role': 'system', 'content': (system or DEFAULT_SYSTEM) + context},
         {'role': 'user', 'content': content},
     ]
 
@@ -200,16 +203,36 @@ def _context_tokens(messages: list[dict[str, Any]]) -> int:
     return finops.estimate_tokens(raw) + 1500 * images
 
 
+def apply_thinking(payload: dict, model: ModelSpec, requested: str | None = None) -> None:
+    """DeepSeek enables thinking by default; keep Flash cheap unless asked."""
+    if model.provider != 'deepseek':
+        return
+    mapping = {'none': None, 'minimal': 'low', 'low': 'low', 'medium': 'high',
+               'high': 'high', 'xhigh': 'max', 'max': 'max'}
+    if requested:
+        effort = mapping.get(requested.lower(), 'high')
+        payload['thinking'] = {'type': 'disabled' if effort is None else 'enabled'}
+        if effort:
+            payload['reasoning_effort'] = effort
+        return
+    if model.tier >= 2:
+        payload['thinking'] = {'type': 'enabled'}
+        payload['reasoning_effort'] = 'high'
+    else:
+        payload['thinking'] = {'type': 'disabled'}
+
+
 def _post(model: ModelSpec, messages: list[dict[str, Any]], temperature: float,
           max_tokens: int, timeout: float) -> tuple[str, dict[str, Any]]:
     token = os.getenv(model.key_var)
     if not token:
         raise ValueError(f'Missing {model.key_var}')
     url = model.endpoint.rstrip('/') + '/chat/completions'
+    payload: dict[str, Any] = {'model': model.id, 'messages': messages,
+                              'temperature': temperature, 'max_tokens': max_tokens}
+    apply_thinking(payload, model)
     response = httpx.post(url, headers={'Authorization': f'Bearer {token}'},
-                          json={'model': model.id, 'messages': messages,
-                                'temperature': temperature, 'max_tokens': max_tokens},
-                          timeout=timeout)
+                          json=payload, timeout=timeout)
     response.raise_for_status()
     data = response.json()
     message = data['choices'][0]['message']
@@ -239,15 +262,16 @@ def ask(prompt: str, cache: Cache, *, vision_path: Path | None = None,
         ttl: int = 3600, temperature: float = 0,
         max_tokens: int | None = None, task: str = 'default',
         budget: Budget | None = None, defer: bool = False, max_wait: float = 0.0,
-        now: dt.datetime | None = None,
+        now: dt.datetime | None = None, system: str | None = None,
+        route_text: str | None = None,
         models: tuple[ModelSpec, ...] = MODELS) -> Answer:
     """Answer a prompt under budget, cache and loop protection."""
     limit = max_tokens or int(os.getenv('DEEP_ULTRA_MAX_TOKENS', DEFAULT_MAX_TOKENS))
     at = now or dt.datetime.now(dt.timezone.utc)
     budget = budget or Budget.from_env()
-    messages = build_messages(prompt, root, vision_path)
+    messages = build_messages(prompt, root, vision_path, system)
     context_tokens = _context_tokens(messages)
-    selected = choose_model(prompt, vision_path is not None, context_tokens, override, models, at)
+    selected = choose_model(route_text or prompt, vision_path is not None, context_tokens, override, models, at)
 
     if defer and finops.is_peak(at):
         wait = (next_off_peak(at) - at).total_seconds()

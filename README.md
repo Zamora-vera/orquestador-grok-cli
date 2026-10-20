@@ -165,6 +165,19 @@ Integration checks (2026-10-20) with Grok CLI and a temporary config: plain
 answer `ok`, tool call counted 4 test files, vision read `HOLA 42`, streaming
 and cache replay verified. The real `~/.grok/config.toml` was not modified.
 
+## Advanced coding
+
+- `deep-ultra analyze .` builds a bounded context pack: structure, dependencies,
+  entry points, test command, TODOs and hotspots. The pack is generated locally
+  and trimmed to a token budget; file contents are only hashed for change
+  detection. `--changed` refreshes an incremental SQLite index.
+- `deep-ultra agents` lists five specialist profiles (architect, coder, debugger,
+  security, tester). `deep-ultra agent auto "task" .` picks one by keyword and
+  sends the pack plus the task through the normal budget, cache and routing path.
+- `deep-ultra bench --tasks benchmarks/tasks --max-usd 0.10` runs verifiable
+  coding tasks through Grok CLI and reports pass rate, cost, tokens and cache
+  hits. See `benchmarks/README.md` for the 2026-10-20 results and caveats.
+
 ## Security
 
 - Credentials come only from environment variables.

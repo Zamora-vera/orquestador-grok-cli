@@ -1,0 +1,1 @@
+El test falla. Corrige calc.py para que `python -m pytest -q` pase. No modifiques los tests.

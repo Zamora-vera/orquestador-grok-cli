@@ -1,0 +1,1 @@
+El test falla porque service.py usa un campo que no existe. Corrige service.py para que `python -m pytest -q` pase. No cambies models.py ni los tests.

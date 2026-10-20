@@ -1,0 +1,7 @@
+{
+  "difficulty": "medium",
+  "id": "medium_multifile",
+  "model": "deep-ultra",
+  "max_turns": 8,
+  "timeout": 300
+}

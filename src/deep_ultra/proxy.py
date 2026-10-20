@@ -22,7 +22,7 @@ import httpx
 
 from . import finops
 from .catalog import MODELS
-from .core import BUDGET_MARGIN, Cache, DEFAULT_MAX_TOKENS, choose_model
+from .core import BUDGET_MARGIN, Cache, DEFAULT_MAX_TOKENS, apply_thinking as _apply_thinking, choose_model
 from .finops import Budget, PricingUnavailable
 
 PUBLIC = ('deep-ultra', 'deep-ultra-flash', 'deep-ultra-pro')
@@ -115,20 +115,8 @@ def _siblings(selected, vision: bool, context: int):
 
 
 def _apply_thinking(payload: dict, model, requested: str | None) -> None:
-    """Thinking is on by default upstream; keep it off on Flash unless asked."""
-    mapping = {'none': None, 'minimal': 'low', 'low': 'low', 'medium': 'high',
-               'high': 'high', 'xhigh': 'max', 'max': 'max'}
-    if requested:
-        effort = mapping.get(requested.lower(), 'high')
-        payload['thinking'] = {'type': 'disabled' if effort is None else 'enabled'}
-        if effort:
-            payload['reasoning_effort'] = effort
-        return
-    if model.tier >= 2:
-        payload['thinking'] = {'type': 'enabled'}
-        payload['reasoning_effort'] = 'high'
-    else:
-        payload['thinking'] = {'type': 'disabled'}
+    from .core import apply_thinking
+    apply_thinking(payload, model, requested)
 
 
 def _new_stream_message(delta: dict, state: dict) -> None:

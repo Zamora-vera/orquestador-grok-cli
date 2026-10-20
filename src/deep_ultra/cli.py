@@ -1,6 +1,7 @@
 """User-operated CLI. No automatic file edits or unsafe terminal commands."""
 import dataclasses
 import datetime as dt
+import json
 import os
 from pathlib import Path
 
@@ -75,6 +76,45 @@ def chat(prompt: str, model: str = typer.Option('', '--model'), image: Path | No
     typer.echo(f"[{answer.model.id} | {answer.tariff} | {detail}]\n{answer.text}")
     for alert in cache.ledger.alerts(config, dt.datetime.now(dt.timezone.utc), task):
         typer.echo(f'Alert: {alert}', err=True)
+
+
+@app.command()
+def analyze(repo: Path = typer.Argument(Path('.')), as_json: bool = typer.Option(False, '--json'),
+            budget_tokens: int = typer.Option(6000, '--budget-tokens', min=500),
+            changed: bool = typer.Option(False, '--changed')):
+    """Summarise a project into a bounded context pack (no API calls)."""
+    from .context import ProjectIndex, build_pack, render_markdown
+    pack = build_pack(repo, budget_tokens)
+    typer.echo(json.dumps(pack, indent=2, ensure_ascii=False) if as_json else render_markdown(pack))
+    if changed:
+        index = ProjectIndex(Path.home() / '.cache' / 'deep-ultra' / 'index.sqlite3')
+        diff = index.refresh(repo)
+        typer.echo(f"index: +{len(diff['added'])} ~{len(diff['changed'])} "
+                   f"-{len(diff['removed'])} total={diff['total']}")
+
+
+@app.command()
+def agent(profile: str, task: str, repo: Path = typer.Argument(Path('.')),
+          budget_tokens: int = typer.Option(6000, '--budget-tokens', min=500),
+          max_tokens: int | None = typer.Option(None, '--max-tokens', min=1)):
+    """Run a specialist profile (or 'auto') against the project context."""
+    from .agents import run_agent
+    try:
+        chosen, pack, answer = run_agent(profile, task, repo, budget_tokens=budget_tokens,
+                                         cache=db(), max_tokens=_limit(max_tokens))
+    except Exception as exc:
+        typer.echo(f'Error: {exc}', err=True)
+        raise typer.Exit(1)
+    typer.echo(f"[{chosen} | {answer.model.id} | {answer.tariff} | "
+               f"ctx~{pack['token_estimate']} | ${answer.cost_usd:.6f}]\n{answer.text}")
+
+
+@app.command('agents')
+def list_agents():
+    """List specialist profiles."""
+    from .agents import PROFILES
+    for name, spec in PROFILES.items():
+        typer.echo(f'{name}: {spec["system"][:90]}...')
 
 
 @app.command()
@@ -162,6 +202,17 @@ def serve(port: int = typer.Option(6011, '--port', min=1)):
     """Run the local OpenAI-compatible router for Grok CLI."""
     from .proxy import serve as run
     run(port)
+
+
+@app.command()
+def bench(tasks: Path = Path('benchmarks/tasks'), max_usd: float = typer.Option(0.10, '--max-usd', min=0),
+          grok: str = typer.Option('grok', '--grok'), out: Path | None = typer.Option(None, '--out'),
+          only: str = typer.Option('', '--only', help='Comma-separated task ids')):
+    """Run verifiable coding tasks through Grok CLI and report real results."""
+    from .bench import run_bench
+    selected = {name.strip() for name in only.split(',') if name.strip()} or None
+    summary = run_bench(tasks, grok=grok, max_usd=max_usd, out=out, only=selected)
+    typer.echo(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
 @app.command()
