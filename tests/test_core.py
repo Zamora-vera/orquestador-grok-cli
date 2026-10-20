@@ -1,4 +1,5 @@
 import datetime as dt
+import os
 
 import httpx
 import pytest
@@ -56,6 +57,8 @@ def test_vision_routes_to_flash_not_kimi(keys, monkeypatch):
 
 
 def test_override_validation(keys, monkeypatch):
+    from deep_ultra import keys as keys_module
+    monkeypatch.setattr(keys_module, 'provider_key', lambda m: os.getenv(m.key_var))
     assert choose_model('anything', override='deepseek-v4-pro').id == 'deepseek-v4-pro'
     with pytest.raises(ValueError):
         choose_model('anything', override='does-not-exist')
