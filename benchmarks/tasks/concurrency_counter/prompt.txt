@@ -1,0 +1,1 @@
+Counter no es thread-safe: increment pierde incrementos. Corrige con un Lock sin cambiar la interfaz. No modifiques los tests.

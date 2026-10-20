@@ -1,0 +1,1 @@
+read_file permite salir del directorio base con "..". Corrige security.py para que solo lea dentro de base y lance ValueError en caso contrario. No modifiques los tests.

@@ -1,0 +1,68 @@
+{
+  "tasks": [
+    {
+      "task": "easy_fix",
+      "difficulty": "easy",
+      "model": "deep-ultra",
+      "passed": true,
+      "seconds": 13.1,
+      "cost_usd": 0.001272,
+      "prompt_tokens": 65240,
+      "cached_tokens": 59776,
+      "completion_tokens": 455,
+      "turns": 5,
+      "workspace": "C:\\Users\\GRUPO~1.SHI\\AppData\\Local\\Temp\\du-bench-easy_fix-_nmuu273",
+      "detail": "{\n  \"text\": \"Corregido. `add` en `calc.py` restaba (`a - b`) y ahora suma (`a + b`), que es lo que espera `test_add`. `python -m pytest -q` pasa: 1 test correcto. No toqué los tests.\",\n  \"stopReason\": \"end_turn\",\n  \"sessionId\": \"01a15ae4-32c7-7aa0-a545-a10567af5482\",\n  \"requestId\": \"8d9c563b-7c0d-4fb6-afb7-b1fc53a64030\",\n  \"cwd\": \"C:\\\\Users\\\\grupo.SHIP24GO\\\\AppData\\\\Local\\\\Temp\\\\du-bench-easy_fix-_nmuu273\",\n  \"usage\": {\n    \"input_tokens\": 5464,\n    \"cache_read_input_tokens\": 59776,\n    \"cache_creation_input_tokens\": 0,\n    \"output_tokens\": 455,\n    \"reasoning_tokens\": 0,\n    \"total_tokens\": 65695\n  },\n  \"num_turns\": 5,\n  \"modelUsage\": {\n    \"deep-ultra\": {\n      \"inputTokens\": 5464,\n      \"outputTokens\": 455,\n      \"cacheReadInputTokens\": 59776,\n      \"cacheCreationInputTokens\": 0,\n      \"modelCalls\": 5\n    }\n  }\n}\n\n.                                                                        [100%]\n1 passed in 0.01s\n"
+    },
+    {
+      "task": "hard_parse",
+      "difficulty": "hard",
+      "model": "deep-ultra",
+      "passed": true,
+      "seconds": 13.3,
+      "cost_usd": 0.001527,
+      "prompt_tokens": 66649,
+      "cached_tokens": 60672,
+      "completion_tokens": 747,
+      "turns": 5,
+      "workspace": "C:\\Users\\GRUPO~1.SHI\\AppData\\Local\\Temp\\du-bench-hard_parse-s_oxzo5x",
+      "detail": "{\n  \"text\": \"`parse_duration` está implementada en `duration.py` y `python -m pytest -q` pasa: 9 tests, 0 fallos.\\n\\nCómo funciona:\\n- Recorre el texto con una expresión regular que exige `dígitos + unidad` en cada posición, así que cualquier carácter suelto, unidad desconocida o número sin unidad lanza `ValueError`.\\n- Suma los segundos de cada tramo con un diccionario de factores (`d`=86400, `h`=3600, `m`=60, `s`=1).\\n- Texto vacío o de tipo distinto de `str` también lanza `ValueError`.\\n\\nMejora técnica: una sola pasada lineal sobre la cadena, sin construcciones intermedias ni `split`/`replace` encadenados, y sin estado mutable compartido; el resultado es O(n) en tiempo y O(1) en memoria adicional.\",\n  \"stopReason\": \"end_turn\",\n  \"sessionId\": \"01a15ae4-69a6-7370-b5e3-c332bbb5a90c\",\n  \"requestId\": \"938bf2e7-79c2-4c05-9bd9-7a6848babe5f\",\n  \"cwd\": \"C:\\\\Users\\\\grupo.SHIP24GO\\\\AppData\\\\Local\\\\Temp\\\\du-bench-hard_parse-s_oxzo5x\",\n  \"usage\": {\n    \"input_tokens\": 5727,\n    \"cache_read_input_tokens\": 60544,\n    \"cache_creation_input_tokens\": 0,\n    \"output_tokens\": 735,\n    \"reasoning_tokens\": 0,\n    \"total_tokens\": 67006\n  },\n  \"num_turns\": 5,\n  \"modelUsage\": {\n    \"deep-ultra\": {\n      \"inputTokens\": 5727,\n      \"outputTokens\": 735,\n      \"cacheReadInputTokens\": 60544,\n      \"cacheCreationInputTokens\": 0,\n      \"modelCalls\": 5\n    }\n  }\n}\n\n.........                                                                [100%]\n9 passed in 0.05s\n"
+    },
+    {
+      "task": "medium_multifile",
+      "difficulty": "medium",
+      "model": "deep-ultra",
+      "passed": true,
+      "seconds": 13.7,
+      "cost_usd": 0.001321,
+      "prompt_tokens": 66181,
+      "cached_tokens": 60288,
+      "completion_tokens": 427,
+      "turns": 5,
+      "workspace": "C:\\Users\\GRUPO~1.SHI\\AppData\\Local\\Temp\\du-bench-medium_multifile-wzvru7jv",
+      "detail": "{\n  \"text\": \"Corregido `service.py`: `display()` ahora lee `user.full_name`, la propiedad que define `User` en `models.py`, en lugar del campo inexistente `user.name`.\\n\\n`python -m pytest -q` pasa: 1 test correcto. No modifiqué `models.py` ni los tests.\",\n  \"stopReason\": \"end_turn\",\n  \"sessionId\": \"01a15ae4-a279-7e71-9649-dfcfb7d3dbb9\",\n  \"requestId\": \"cb3b52f0-50be-4885-98f4-da8b226e3dea\",\n  \"cwd\": \"C:\\\\Users\\\\grupo.SHIP24GO\\\\AppData\\\\Local\\\\Temp\\\\du-bench-medium_multifile-wzvru7jv\",\n  \"usage\": {\n    \"input_tokens\": 5560,\n    \"cache_read_input_tokens\": 60032,\n    \"cache_creation_input_tokens\": 0,\n    \"output_tokens\": 409,\n    \"reasoning_tokens\": 0,\n    \"total_tokens\": 66001\n  },\n  \"num_turns\": 5,\n  \"modelUsage\": {\n    \"deep-ultra\": {\n      \"inputTokens\": 5560,\n      \"outputTokens\": 409,\n      \"cacheReadInputTokens\": 60032,\n      \"cacheCreationInputTokens\": 0,\n      \"modelCalls\": 5\n    }\n  }\n}\n\n.                                                                        [100%]\n1 passed in 0.01s\n"
+    },
+    {
+      "task": "medium_slug",
+      "difficulty": "medium",
+      "model": "deep-ultra",
+      "passed": true,
+      "seconds": 12.8,
+      "cost_usd": 0.001334,
+      "prompt_tokens": 65502,
+      "cached_tokens": 59904,
+      "completion_tokens": 524,
+      "turns": 5,
+      "workspace": "C:\\Users\\GRUPO~1.SHI\\AppData\\Local\\Temp\\du-bench-medium_slug-dg21kwba",
+      "detail": "{\n  \"text\": \"Implementé `slugify` en `textutil.py` y `python -m pytest -q` pasa: 5 tests correctos.\\n\\nCómo funciona:\\n- `unicodedata.normalize('NFKD', ...)` separa los acentos y `encode('ascii', 'ignore')` los elimina, así `Café Ñandú` queda `cafe-nandu`.\\n- Pasa a minúsculas y convierte espacios y guiones bajos en guion.\\n- Elimina cualquier carácter que no sea letra, número o guion.\\n- Colapsa guiones repetidos y recorta los de los extremos.\\n\\nMejora técnica: la normalización Unicode resuelve los acentos de forma genérica, sin tablas de reemplazo manuales, y las expresiones regulares se compilan una sola vez por llamada con coste lineal en el tamaño del texto.\",\n  \"stopReason\": \"end_turn\",\n  \"sessionId\": \"01a15ae4-daf3-7470-9c50-99673fe314f2\",\n  \"requestId\": \"677fecd4-6f09-410d-ba8f-3d22639bc99f\",\n  \"cwd\": \"C:\\\\Users\\\\grupo.SHIP24GO\\\\AppData\\\\Local\\\\Temp\\\\du-bench-medium_slug-dg21kwba\",\n  \"usage\": {\n    \"input_tokens\": 5598,\n    \"cache_read_input_tokens\": 59904,\n    \"cache_creation_input_tokens\": 0,\n    \"output_tokens\": 524,\n    \"reasoning_tokens\": 0,\n    \"total_tokens\": 66026\n  },\n  \"num_turns\": 5,\n  \"modelUsage\": {\n    \"deep-ultra\": {\n      \"inputTokens\": 5598,\n      \"outputTokens\": 524,\n      \"cacheReadInputTokens\": 59904,\n      \"cacheCreationInputTokens\": 0,\n      \"modelCalls\": 5\n    }\n  }\n}\n\n.....                                                                    [100%]\n5 passed in 0.02s\n"
+    }
+  ],
+  "passed": 4,
+  "total": 4,
+  "success_rate": 1.0,
+  "cost_usd": 0.005454,
+  "prompt_tokens": 263572,
+  "cached_tokens": 240640,
+  "completion_tokens": 2153,
+  "max_usd": 0.1
+}

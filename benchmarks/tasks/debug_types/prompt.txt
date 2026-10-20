@@ -1,0 +1,1 @@
+El test falla porque los precios llegan como texto. Corrige prices.py para sumar numeros. No modifiques los tests.

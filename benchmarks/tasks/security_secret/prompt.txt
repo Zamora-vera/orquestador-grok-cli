@@ -1,0 +1,1 @@
+public_config expone secretos. Corrige security_secret.py para eliminar las claves password, token y secret. No modifiques los tests.
